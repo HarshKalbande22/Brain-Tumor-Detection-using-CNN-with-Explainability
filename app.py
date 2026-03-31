@@ -30,12 +30,15 @@ def load_model_lazy():
     global model
 
     if model is None:
-        # Download model only if not exists
+        import os
+        os.environ["TF_USE_LEGACY_KERAS"] = "1"
+
         if not os.path.exists(MODEL_PATH):
+            import gdown
             url = "https://drive.google.com/uc?id=1RJQxqB2iVI6UsR6_OclgvFyUTxqdSiQe"
             gdown.download(url, MODEL_PATH, quiet=False)
 
-        model = load_model(MODEL_PATH, compile=False)
+        model = tf.keras.models.load_model(MODEL_PATH, compile=False)
 
     return model
 
