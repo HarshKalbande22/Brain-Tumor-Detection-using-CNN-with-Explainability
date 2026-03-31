@@ -1,7 +1,7 @@
-flask==2.3.2
+flask==2.2.5
 gunicorn==21.2.0
 numpy==1.23.5
 opencv-python-headless==4.7.0.72
 Pillow==9.5.0
-tensorflow-cpu==2.6.0
+tensorflow-cpu==2.10.0
 gdown
