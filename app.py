@@ -35,7 +35,7 @@ def load_model_lazy():
             url = "https://drive.google.com/uc?id=1RJQxqB2iVI6UsR6_OclgvFyUTxqdSiQe"
             gdown.download(url, MODEL_PATH, quiet=False)
 
-        model = load_model(MODEL_PATH)
+        model = load_model(MODEL_PATH, compile=False)
 
     return model
 
