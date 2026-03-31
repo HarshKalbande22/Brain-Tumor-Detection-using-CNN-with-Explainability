@@ -7,6 +7,7 @@ from tensorflow.keras.models import load_model
 from tensorflow.keras.preprocessing import image
 from PIL import Image
 import gdown
+import gc
 
 app = Flask(__name__)
 
@@ -97,7 +98,8 @@ def index():
         gradcam_path = os.path.join(GRADCAM_FOLDER, gradcam_filename)
 
         save_gradcam(original_path, heatmap, gradcam_path)
-
+        del img_array
+        gc.collect()
         return render_template(
             "index.html",
             result=f"Predicted Tumor: {predicted_class}",
