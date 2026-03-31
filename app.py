@@ -6,6 +6,7 @@ import cv2
 from tensorflow.keras.models import load_model
 from tensorflow.keras.preprocessing import image
 from PIL import Image
+import gdown
 
 app = Flask(__name__)
 
@@ -19,6 +20,11 @@ LAST_CONV_LAYER = "block5_conv4"
 
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 os.makedirs(GRADCAM_FOLDER, exist_ok=True)
+
+# Download model if not exists
+if not os.path.exists(MODEL_PATH):
+    url = "https://drive.google.com/uc?id=1RJQxqB2iVI6UsR6_OclgvFyUTxqdSiQe"
+    gdown.download(url, MODEL_PATH, quiet=False)
 
 model = load_model(MODEL_PATH)
 
@@ -103,4 +109,4 @@ def index():
     return render_template("index.html", result=None)
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(host="0.0.0.0", port=10000)
