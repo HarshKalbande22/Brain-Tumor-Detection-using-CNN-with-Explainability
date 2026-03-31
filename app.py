@@ -17,17 +17,28 @@ GRADCAM_FOLDER = "static/gradcam"
 IMG_SIZE = (224, 224)
 
 class_names = ['pituitary', 'glioma', 'notumor', 'meningioma']
-LAST_CONV_LAYER = "block5_conv4" 
+LAST_CONV_LAYER = "block5_conv4"
 
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 os.makedirs(GRADCAM_FOLDER, exist_ok=True)
 
-# Download model if not exists
-if not os.path.exists(MODEL_PATH):
-    url = "https://drive.google.com/uc?id=1RJQxqB2iVI6UsR6_OclgvFyUTxqdSiQe"
-    gdown.download(url, MODEL_PATH, quiet=False)
+# 🔥 IMPORTANT: Do NOT load model at startup
+model = None
 
-model = load_model(MODEL_PATH)
+
+def load_model_lazy():
+    global model
+
+    if model is None:
+        # Download model only if not exists
+        if not os.path.exists(MODEL_PATH):
+            url = "https://drive.google.com/uc?id=1RJQxqB2iVI6UsR6_OclgvFyUTxqdSiQe"
+            gdown.download(url, MODEL_PATH, quiet=False)
+
+        model = load_model(MODEL_PATH)
+
+    return model
+
 
 def generate_gradcam(img_array, model, last_conv_layer):
     grad_model = tf.keras.models.Model(
@@ -71,6 +82,7 @@ def save_gradcam(original_img_path, heatmap, output_path, alpha=0.4):
 
     cv2.imwrite(output_path, superimposed_img)
 
+
 @app.route("/", methods=["GET", "POST"])
 def index():
     if request.method == "POST":
@@ -78,6 +90,9 @@ def index():
 
         if not file or file.filename == "":
             return render_template("index.html", result="No file selected")
+
+        # Load model only when needed
+        model_local = load_model_lazy()
 
         original_path = os.path.join(UPLOAD_FOLDER, file.filename)
         file.save(original_path)
@@ -87,19 +102,22 @@ def index():
         img_array = image.img_to_array(img)
         img_array = np.expand_dims(img_array, axis=0) / 255.0
 
-        preds = model.predict(img_array)
+        preds = model_local.predict(img_array)
         pred_index = np.argmax(preds[0])
         predicted_class = class_names[pred_index]
         confidence = round(np.max(preds) * 100, 2)
 
-        heatmap = generate_gradcam(img_array, model, LAST_CONV_LAYER)
+        heatmap = generate_gradcam(img_array, model_local, LAST_CONV_LAYER)
 
         gradcam_filename = "gradcam_" + file.filename
         gradcam_path = os.path.join(GRADCAM_FOLDER, gradcam_filename)
 
         save_gradcam(original_path, heatmap, gradcam_path)
-        del img_array
+
+        # 🔥 Memory cleanup
+        del img_array, preds, heatmap
         gc.collect()
+
         return render_template(
             "index.html",
             result=f"Predicted Tumor: {predicted_class}",
@@ -110,5 +128,8 @@ def index():
 
     return render_template("index.html", result=None)
 
+
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=10000)
+    import os
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port)
