@@ -3,7 +3,6 @@ import tensorflow as tf
 import numpy as np
 import os
 import cv2
-from tensorflow.keras.models import load_model
 from tensorflow.keras.preprocessing import image
 from PIL import Image
 import gdown
@@ -11,7 +10,9 @@ import gc
 
 app = Flask(__name__)
 
-MODEL_PATH = "vgg19_brain_tumor_95acc.h5"
+# ✅ UPDATED MODEL PATH
+MODEL_PATH = "model.keras"
+
 UPLOAD_FOLDER = "static/uploads"
 GRADCAM_FOLDER = "static/gradcam"
 IMG_SIZE = (224, 224)
@@ -22,7 +23,7 @@ LAST_CONV_LAYER = "block5_conv4"
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 os.makedirs(GRADCAM_FOLDER, exist_ok=True)
 
-# 🔥 IMPORTANT: Do NOT load model at startup
+# Lazy loading
 model = None
 
 
@@ -30,14 +31,14 @@ def load_model_lazy():
     global model
 
     if model is None:
-        import os
-        os.environ["TF_USE_LEGACY_KERAS"] = "1"
-
         if not os.path.exists(MODEL_PATH):
-            import gdown
-            url = "https://drive.google.com/uc?id=1RJQxqB2iVI6UsR6_OclgvFyUTxqdSiQe"
+            print("Downloading model...")
+
+            # ✅ YOUR NEW MODEL LINK
+            url = "https://drive.google.com/uc?id=1kAU4E9UQzyc5pCR-lJydCjhK0K8b2yVe"
             gdown.download(url, MODEL_PATH, quiet=False)
 
+        print("Loading model...")
         model = tf.keras.models.load_model(MODEL_PATH, compile=False)
 
     return model
@@ -94,7 +95,6 @@ def index():
         if not file or file.filename == "":
             return render_template("index.html", result="No file selected")
 
-        # Load model only when needed
         model_local = load_model_lazy()
 
         original_path = os.path.join(UPLOAD_FOLDER, file.filename)
@@ -117,7 +117,7 @@ def index():
 
         save_gradcam(original_path, heatmap, gradcam_path)
 
-        # 🔥 Memory cleanup
+        # Cleanup memory
         del img_array, preds, heatmap
         gc.collect()
 
@@ -133,6 +133,5 @@ def index():
 
 
 if __name__ == "__main__":
-    import os
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port)
